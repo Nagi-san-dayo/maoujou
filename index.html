@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>魔王城 ― 十の階層</title>
+<style>
+html,body{margin:0;height:100%;background:#05040a;color:#ece6d8;font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif}
+#g{position:absolute;inset:0;margin:auto;width:min(100vw,calc(100vh*16/9));height:min(100vh,calc(100vw*9/16));container-type:inline-size;overflow:hidden;user-select:none}
+canvas,#u{position:absolute;inset:0;width:100%;height:100%}
+#u{display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;padding:3cqw;font-size:2.4cqw;line-height:1.8}
+.tb{background:#0b0918ee;border:1px solid #d9b45a88;padding:1.2cqw 2.4cqw;min-height:9cqw;cursor:pointer}
+.tb b{color:#d9b45a;font-size:2cqw}.tb p{margin:0}
+.bn{margin:auto;font-size:8cqw;letter-spacing:.3em;color:#e8553d;cursor:pointer;text-align:center}
+.tw{margin:auto;text-align:center}.tw h1{font-size:8cqw;margin:0 0 1cqw;letter-spacing:.4em;font-weight:600}.tw h2{font-size:3cqw;margin:0 0 1cqw}
+button{font:inherit;color:#ece6d8;background:#0b0918cc;border:1px solid #e8553d;padding:.5cqw 2cqw;cursor:pointer}
+button:disabled{opacity:.35;cursor:default;border-color:#555}button:not(:disabled):hover{background:#e8553d55}
+.gr{display:grid;gap:.4cqw;font-size:1.9cqw;width:40cqw;margin:auto}.gr button{padding:.2cqw 1cqw}
+small{font-size:1.6cqw;opacity:.8;display:block;margin-top:1cqw}
+</style></head><body>
+<div id="g"><canvas id="c" width="800" height="450"></canvas><div id="u"></div></div>
+<script>
+/* ===== BGM（bgm/フォルダに置く。ogg→m4a→mp3の順に試し、再生できた方を使う。片方だけでもOK。拡張子や形式はここで変更可）===== */
+const bg=n=>[`bgm/${n}.ogg`,`bgm/${n}.m4a`,`bgm/${n}.mp3`];
+const BGM={talk:bg('talk'),battle:bg('battle'),maou:bg('maou'),true:bg('true'),story:bg('story'),end:bg('end')};
+/* ===== 基本設定 ===== */
+const W=800,H=450,GY=400,TIME=180*60,CUT=60*60; // 戦闘3分 / 残り1分で激化
+const DE=['eins','zwei','drei','vier','fünf','sechs','sieben','acht','neun'];
+const NM=[3,7,1,5,9,2,8,4,6]; // 階層(1〜9)→数字。階層と数字は一致しない
+const resume=()=>{let a=A[cur];if(a&&a.paused)a.play().catch(()=>{})};
+const c=document.getElementById('c'),x=c.getContext('2d'),U=document.getElementById('u');
+const A={},K={},rnd=(a,b)=>a+Math.random()*(b-a);
+let cur=null,mode='m',adv=null,bt=null,run={cl:[]},BH=250,seen=0,S={ng:0};
+try{S.ng=+localStorage.getItem('ng')||0}catch(e){}
+const ST=Array.from({length:50},()=>[rnd(0,W),rnd(0,H)]);
+function play(k){if(cur===k){resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
+ let a=A[k]||(A[k]=mk(k));a.currentTime=0;a.play().catch(()=>{})}
+function mk(k){let L=BGM[k],i=0,a=new Audio(L[0]);a.loop=true;
+ a.onerror=()=>{if(++i<L.length){a.src=L[i];if(cur===k)a.play().catch(()=>{})}};return a} // 読み込めない/非対応なら次の候補へ
+/* ===== 弾幕パターン（添字0〜8 = eins〜neun）===== */
+const B=(px,py,vx,vy,r=6)=>{let b={x:px,y:py,vx,vy,r,a:0};bt.bl.push(b);return b};
+const ring=(px,py,n,v,o=0)=>{for(let i=0;i<n;i++){let a=o+i*6.283/n;B(px,py,Math.cos(a)*v,Math.sin(a)*v)}};
+const aim=(px,py,v,o=0)=>{let a=Math.atan2(bt.y-12-py,bt.x-px)+o;B(px,py,Math.cos(a)*v,Math.sin(a)*v)};
+const sweep=(T,n,v)=>{let l=T%(n*2)<n;B(l?-10:W+10,GY-8,l?v:-v,0,9)};
+const P=[
+ e=>{if(e(7))B(rnd(0,W),-5,0,rnd(3,4.5))},                                   // eins:雨
+ (e,T)=>{if(e(75))sweep(T,75,4.5);if(e(40))B(rnd(0,W),-5,0,3)},              // zwei:地面を走る弾(ジャンプ)
+ (e,T)=>{if(e(6))for(let i=0;i<3;i++){let a=T*.11+i*2.094;B(400,110,Math.cos(a)*2.6,Math.sin(a)*2.6)}}, // drei:渦
+ e=>{if(e(36))for(let i=-1;i<=1;i++)aim(rnd(100,700),40,4,i*.22)},            // vier:自機狙い
+ (e,T)=>{if(e(95))ring(rnd(150,650),rnd(60,160),14,2.2,T)},                   // fünf:全方位リング
+ e=>{if(e(110)){let g=Math.random()*14|0;for(let i=0;i<17;i++)if(i<g||i>g+2)B(i*50,-5,0,2.4,8)}}, // sechs:隙間のある壁
+ e=>{if(e(80)){let b=B(rnd(0,W),-5,0,1.6,8);b.u=b=>{if(b.a++<110){let d=Math.atan2(bt.y-12-b.y,bt.x-b.x);b.vx+=(Math.cos(d)*1.8-b.vx)*.04;b.vy+=(Math.sin(d)*1.8-b.vy)*.04}}}}, // sieben:ホーミング
+ e=>{if(e(14)){let x0=rnd(60,740),b=B(x0,-5,0,2.6);b.u=b=>{b.x=x0+Math.sin(b.a++*.09)*70}}}, // acht:蛇行
+ (e,T)=>{P[4](e,T);if(e(70))sweep(T,70,5)}                                    // neun:リング+地面弾(中ボス)
+];
+const SEG=360; // 弾幕ルーチンを切り替える間隔(フレーム。360=6秒)
+const ROT=[[0,3,0,5],[1,6,1,2],[2,4,2,7],[3,0,3,6],[4,1,4,7],[5,2,5,3],[6,4,6,1],[7,0,7,5],[8,2,8,3]]; // 各敵の弾幕の順番(0=eins…8=neun)。先頭が得意技
+const rot=n=>(e,T)=>P[ROT[n-1][T/SEG%4|0]](e,T);
+const MAOU=(e,T)=>{let p=T/SEG%4|0;if(p==0){P[2](e,T);P[3](e,T);if(e(80))sweep(T,80,4.5)}else{P[[5,6,7][p-1]](e,T);P[[1,4,3][p-1]](e,T)}};
+const TRUE=(e,T)=>{let p=T/SEG|0;P[[2,4,5,6,7,1,8][p%7]](e,T);P[[3,1,0,3,4,2,5][p%7]](e,T)};
+/* ===== 戦闘 ===== */
+function battle(o){play(o.bgm);mode='b';adv=null;U.innerHTML='';bt={...o,t:0,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
+function step(){let s=bt;
+ if(s.dead){if(--s.dead==0){let L=s.lose;bt=null;die(L)}return}
+ if(s.cut>0)s.cut--; // カットイン表示中もゲームは止めない
+ s.t++;
+ if(s.t==CUT*2&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
+ let L=K.ArrowLeft||K.KeyA,R=K.ArrowRight||K.KeyD;
+ s.x=Math.max(10,Math.min(W-10,s.x+(R?4.5:0)-(L?4.5:0)));
+ if((K.ArrowUp||K.KeyW)&&s.y>=GY)s.vy=-12.5;
+ s.vy+=.7;s.y+=s.vy;if(s.y>GY){s.y=GY;s.vy=0}
+ if(s.t>60)s.pat(n=>s.t%Math.max(2,Math.round(n/s.f))==0,s.t);
+ for(const b of s.bl){b.x+=b.vx;b.y+=b.vy;b.u&&b.u(b)}
+ s.bl=s.bl.filter(b=>b.x>-60&&b.x<W+60&&b.y>-60&&b.y<H+40);
+ if(s.bl.some(b=>Math.hypot(b.x-s.x,b.y-s.y+12)<b.r+3))s.dead=45; // 1発で死亡
+ else if(s.t>=TIME){let d=s.done;bt=null;d()}
+}
+function drawB(){let s=bt,h=s.hue;
+ x.fillStyle='#ffffff18';x.fillRect(0,GY,W,H-GY);x.fillStyle=`hsl(${h},50%,40%)`;x.fillRect(0,GY,W,2);
+ x.textAlign='center';x.fillStyle=`hsla(${h},60%,70%,.25)`;x.font='bold 120px serif';x.fillText(s.name,W/2,230);
+ x.fillStyle=`hsl(${h},70%,60%)`;x.beginPath();x.arc(W/2,60+Math.sin(s.t/20)*6,22,0,7);x.fill();
+ for(const b of s.bl){x.fillStyle=`hsl(${(h+180)%360},90%,55%)`;x.beginPath();x.arc(b.x,b.y,b.r,0,7);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(b.x,b.y,b.r*.5,0,7);x.fill()}
+ x.fillStyle='#d9b45a';x.fillRect(s.x-7,s.y-24,14,24); // 勇者
+ x.fillStyle='#fff';x.beginPath();x.arc(s.x,s.y-12,3,0,7);x.fill(); // 当たり判定
+ x.font='20px serif';x.textAlign='left';x.fillStyle='#ece6d8';
+ let r=Math.ceil((TIME-s.t)/60);x.fillText(`${s.name}　残り ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}`,16,28);
+ if(s.cut>0){let t=s.cut,k=Math.min(1,(100-t)/12,t/12);x.save();x.translate((1-k)*-W,0);
+  x.globalAlpha=.85;x.fillStyle=`hsl(${h},70%,30%)`;x.fillRect(0,36,W,60);x.globalAlpha=1;x.fillStyle='#fff';x.textAlign='center';
+  x.font='bold 32px serif';x.fillText('残り1分',W/2,70);x.font='16px serif';x.fillText(s.name+'　— 踊り狂え—',W/2,89);x.restore()}
+}
+function draw(ts){x.fillStyle=`hsl(${BH},45%,7%)`;x.fillRect(0,0,W,H);
+ for(let i=0;i<50;i++){x.fillStyle=`hsla(${BH},60%,85%,${.3+.3*Math.sin(ts/600+i)})`;x.fillRect(ST[i][0],ST[i][1],2,2)}
+ if(bt)drawB()}
+let acc=0,last=0;
+function loop(ts){acc+=Math.min(ts-last,100);last=ts;while(acc>=16.67){acc-=16.67;if(bt)step()}draw(ts);requestAnimationFrame(loop)}
+/* ===== 画面・ストーリー ===== */
+function scene(L,bgm,cb,hue=250){play(bgm);BH=hue;mode='s';let i=0;
+ const show=()=>{let l=L[i];if(l[0]=='#')U.innerHTML=`<div class="bn">${l.slice(1)}</div>`;
+  else{let [a,b]=l.includes('｜')?l.split('｜'):['',l];U.innerHTML=`<div class="tb">${a?`<b>${a}</b>`:''}<p>${b}</p></div>`}};
+ adv=()=>{if(++i>=L.length){adv=null;U.innerHTML='';cb()}else show()};show()}
+function title(){play('talk');mode='m';BH=250;U.innerHTML=`<div class="tw"><h1>魔王城</h1><p>十の階層、ふたりの旅路</p><button onclick="start()">${S.ng?'二周目をはじめる':'はじめる'}</button></div>`}
+function start(){run={cl:[]};if(seen)return nx();seen=1;
+ scene(S.ng?['世界は崩壊した。…はずだった。気づけば、ふたりは再び魔王城の門の前に立っていた。','ミナ｜奇妙ね…','ミナ｜皆、ばらばらだわ…','勇者｜今度は、どの階層から挑んでもいい。色々試してみよう。']
+ :['勇者と、幼馴染の僧侶ミナは、魔王城の門をくぐった。','ミナ｜この城は全部で10階層。いちばん上に、魔王がいるんだよね。','勇者｜ああ。ふたりなら、きっと大丈夫だ。','ミナ｜…うん。でも、なんだか胸がざわざわするの。行こう、勇者。'],'talk',nx)}
+const nx=()=>S.ng?tower():fl(run.cl.length+1);
+function tower(){play('talk');mode='m';adv=null;BH=250;let n=run.cl.length,h='';
+ for(let f=10;f>=1;f--){let m=NM[f-1],cl=run.cl.includes(f);
+  h+=`<button ${cl||(f==10&&n<9)?'disabled':''} onclick="fl(${f})">${f==10?'第10階層　魔王':`第${f}階層　${DE[m-1]}（${m}）${f==5?'　★中ボス':''}${cl?'　✓':''}`}</button>`}
+ U.innerHTML=`<div class="tw"><h2>魔王城</h2><div class="gr">${h}</div><small>eins=1 zwei=2 drei=3 vier=4 fünf=5 sechs=6 sieben=7 acht=8 neun=9　／　撃破順：${run.cl.map(f=>DE[NM[f-1]-1]).join(' → ')||'—'}</small></div>`}
+function fl(f){if(f==10)return boss();let n=NM[f-1];
+ scene([`第${f}階層。`,`${DE[n-1]}（${n}）が現れた！`+(f==5?'　——この階層の主、中ボスだ。':'')],'talk',()=>
+  battle({name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.25:1,bgm:'battle',done:()=>{run.cl.push(f);
+   scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...(f==5?['ミナ｜やったね、勇者！あと半分だよ。']:[])],'talk',nx)}}),(n*36))}
+function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
+ if(ok)scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ','勇者｜ここでお前を倒す！','ミナ｜はい、ストップ','勇者｜ミナ…？','ミナ｜ずっとこの時を待っていたのよ、私自身が魔王となって、勇者、貴方を倒す時をね…','魔王｜なんだ…何を言って…','魔王｜ぐっ…','魔王はミナに吸収された。','ミナ｜さぁ、一緒に踊りましょう？'],'story',
+  ()=>battle({name:'ミナ',hue:300,pat:TRUE,f:1,bgm:'true',done:trueEnd,lose:['勇者の体を、無数の光が貫いた。','ミナ｜期待外れね。','#DEAD END','進行状況は失われた。最初からやり直しだ。']}),300);
+ else scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ。','ミナ｜あなたを倒しに来たわ！','勇者｜ここまで来たんだ。行くぞ！'],'talk',
+  ()=>battle({name:'魔王',hue:0,pat:MAOU,f:1.1,bgm:'maou',done:badEnd}),0)}
+function badEnd(){S.ng=1;try{localStorage.setItem('ng','1')}catch(e){}seen=0;
+ scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える、楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
+function trueEnd(){seen=0;
+ scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
+function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END','進行状況は失われた。最初からやり直しだ。'],'end',title,0)} // battle()にlose:[台詞…]を渡すと、その敵に負けた時だけ専用のセリフになる
+/* ===== 入力 ===== */
+/* テスト用: Shift+1 で「eins→neun の順に9体撃破済み・二周目」の状態にして階層選択へ。第10階層に入ると真ボス前のストーリーが始まる */
+/* テスト用: Shift+2 で「9階層を階層順に撃破済み(=魔王ルート)・一周目」の状態にして、魔王戦前のストーリーへ */
+function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.innerHTML='';boss()}
+const DEBUG=true; // 公開ビルドではGitHub Actionsがfalseに書き換える(ローカルではtrueのまま)
+function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
+addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
+ if(['Space','Enter','KeyZ'].includes(e.code)&&mode=='s'&&adv)adv()});
+addEventListener('pointerdown',resume);addEventListener('keydown',resume);
+addEventListener('keyup',e=>K[e.code]=0);
+U.addEventListener('click',()=>{if(mode=='s'&&adv)adv()});
+title();requestAnimationFrame(t=>{last=t;loop(t)});
+</script></body></html>
