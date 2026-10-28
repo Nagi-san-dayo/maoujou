@@ -1,0 +1,57 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # "true" にすると、公開版でも Shift+1 のテスト用ショートカットが有効になる
+  DEBUG_SHORTCUT: "false"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check script syntax
+        run: |
+          node -e "const m=require('fs').readFileSync('index.html','utf8').match(/<script>([\s\S]*)<\/script>/);if(!m)throw new Error('script not found');new Function(m[1]);console.log('syntax ok')"
+
+      - name: Build
+        run: |
+          mkdir dist
+          cp index.html dist/
+          if [ -d bgm ]; then cp -r bgm dist/; else echo "::warning::bgm フォルダがありません"; fi
+          for n in talk battle maou true story end; do
+            [ -f dist/bgm/$n.ogg ] || [ -f dist/bgm/$n.mp3 ] || echo "::warning::bgm/$n.ogg か bgm/$n.mp3 がありません"
+          done
+          if [ "$DEBUG_SHORTCUT" != "true" ]; then
+            sed -i 's/const DEBUG=true;/const DEBUG=false;/' dist/index.html
+            grep -q 'const DEBUG=false;' dist/index.html
+          fi
+          du -sh dist
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
