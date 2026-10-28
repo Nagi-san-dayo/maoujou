@@ -16,7 +16,7 @@ concurrency:
 
 env:
   # "true" にすると、公開版でも Shift+1 のテスト用ショートカットが有効になる
-  DEBUG_SHORTCUT: "false"
+  DEBUG_SHORTCUT: "true"
 
 jobs:
   build:
