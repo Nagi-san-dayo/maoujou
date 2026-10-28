@@ -96,7 +96,7 @@ function scene(L,bgm,cb,hue=250){play(bgm);BH=hue;mode='s';let i=0;
  adv=()=>{if(++i>=L.length){adv=null;U.innerHTML='';cb()}else show()};show()}
 function title(){play('talk');mode='m';BH=250;U.innerHTML=`<div class="tw"><h1>魔王城</h1><p>十の階層、ふたりの旅路</p><button onclick="start()">${S.ng?'二周目をはじめる':'はじめる'}</button></div>`}
 function start(){run={cl:[]};if(seen)return nx();seen=1;
- scene(S.ng?['世界は崩壊した。…はずだった。気づけば、ふたりは再び魔王城の門の前に立っていた。','ミナ｜ねえ、思い出したの。この城のモンスターたち、みんな数の名前を持ってた。','ミナ｜eins、zwei、drei…。1から9まで、順番に倒したら、何かが変わるのかな。','勇者｜今度は、どの階層から挑んでもいい。確かめよう。']
+ scene(S.ng?['世界は崩壊した。…はずだった。気づけば、ふたりは再び魔王城の門の前に立っていた。','ミナ｜奇妙ね…','ミナ｜皆、ばらばらだわ…','勇者｜今度は、どの階層から挑んでもいい。色々試してみよう。']
  :['勇者と、幼馴染の僧侶ミナは、魔王城の門をくぐった。','ミナ｜この城は全部で10階層。いちばん上に、魔王がいるんだよね。','勇者｜ああ。ふたりなら、きっと大丈夫だ。','ミナ｜…うん。でも、なんだか胸がざわざわするの。行こう、勇者。'],'talk',nx)}
 const nx=()=>S.ng?tower():fl(run.cl.length+1);
 function tower(){play('talk');mode='m';adv=null;BH=250;let n=run.cl.length,h='';
@@ -113,9 +113,9 @@ function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  else scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ。','ミナ｜…勇者、本当に倒していいの？ 私、嫌な予感がする。','勇者｜ここまで来たんだ。行くぞ！'],'talk',
   ()=>battle({name:'魔王',hue:0,pat:MAOU,f:1.1,bgm:'maou',done:badEnd}),0)}
 function badEnd(){S.ng=1;try{localStorage.setItem('ng','1')}catch(e){}seen=0;
- scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える、楔……。','勇者｜……え？','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
+ scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える、楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
 function trueEnd(){seen=0;
- scene(['ミナ｜…あったかい。ありがとう、勇者。','魔王の力は消え、世界を支える楔は、ふたりの手で守られた。','朝日の中、ふたりは並んで魔王城をあとにした。','#TRUE END','— Thank you for playing —'],'story',title,45)}
+ scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
 function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END','進行状況は失われた。最初からやり直しだ。'],'end',title,0)} // battle()にlose:[台詞…]を渡すと、その敵に負けた時だけ専用のセリフになる
 /* ===== 入力 ===== */
 /* テスト用: Shift+1 で「eins→neun の順に9体撃破済み・二周目」の状態にして階層選択へ。第10階層に入ると真ボス前のストーリーが始まる */
