@@ -101,7 +101,7 @@ function scene(L,bgm,cb,hue=250){play(bgm);BH=hue;mode='s';let i=0;
 const WP='<div><button class="wp" onclick="wipe()">セーブデータを消去</button></div>';
 function wipe(){if(!confirm('セーブデータをすべて消去します。よろしいですか？'))return;
  try{localStorage.removeItem('save');localStorage.removeItem('ng')}catch(e){}S.ng=0;run={cl:[]};seen=0;title()}
-function title(){play('talk');mode='m';BH=250;U.innerHTML=`<div class="tw"><h1>魔王城</h1><p>十の階層、ふたりの旅路</p><button onclick="start()">${run.cl.length?'つづきから':S.ng?'二周目をはじめる':'はじめる'}</button>${WP}</div>`}
+function title(){play('talk');mode='title';BH=250;U.innerHTML=`<div class="tw"><h1>魔王城</h1><p>十の階層、ふたりの旅路</p><button onclick="start()">${run.cl.length?'つづきから':S.ng?'二周目をはじめる':'はじめる'}</button>${WP}</div>`}
 function start(){if(seen||run.cl.length)return nx();seen=1;
  scene(S.ng?['世界は崩壊した。…はずだった。気づけば、ふたりは再び魔王城の門の前に立っていた。','ミナ｜奇妙ね…','ミナ｜皆、ばらばらだわ…','勇者｜今度は、どの階層から挑んでもいい。色々試してみよう。']
  :['勇者と、幼馴染の僧侶ミナは、魔王城の門をくぐった。','ミナ｜この城は全部で10階層。いちばん上に、魔王がいるんだよね。','勇者｜ああ。ふたりなら、きっと大丈夫だ。','ミナ｜…うん。でも、なんだか胸がざわざわするの。行こう、勇者。'],'talk',nx)}
@@ -131,7 +131,11 @@ function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.in
 const DEBUG=true; // 公開ビルドではGitHub Actionsがfalseに書き換える(ローカルではtrueのまま)
 function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
 addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
- if(['Space','Enter','KeyZ'].includes(e.code)&&mode=='s'&&adv)adv()});
+ if(['Space','Enter','KeyZ'].includes(e.code)){
+  if(mode=='s'&&adv)adv();
+  else if(mode=='title')start();
+ }
+});
 addEventListener('pointerdown',resume);addEventListener('keydown',resume);
 addEventListener('keyup',e=>K[e.code]=0);
 U.addEventListener('click',()=>{if(mode=='s'&&adv)adv()});
