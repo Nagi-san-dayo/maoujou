@@ -30,26 +30,26 @@ const A={},K={},rnd=(a,b)=>a+Math.random()*(b-a);
 let cur=null,mode='m',adv=null,bt=null,run={cl:[]},BH=250,seen=0,S={ng:0};
 function save(){try{localStorage.setItem('save',JSON.stringify({ng:S.ng,cl:run.cl}))}catch(e){}} // 保存内容: 二周目フラグ(ng)と撃破済み階層(cl)
 try{let d=JSON.parse(localStorage.getItem('save')||'null');if(d){S.ng=d.ng|0;run.cl=Array.isArray(d.cl)?d.cl.filter(f=>f>=1&&f<=9):[]}else S.ng=+localStorage.getItem('ng')||0}catch(e){}
-const ST=Array.from({length:50},()=>[rnd(0,W),rnd(0,H)]);
+const ST=Array.from({length:50},(_,i)=>[((i*137)%W),((i*83)%H)]); // 背景星の固定配置
 function play(k){if(cur===k){resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
  let a=A[k]||(A[k]=mk(k));a.currentTime=0;a.play().catch(()=>{})}
 function mk(k){let L=BGM[k],i=0,a=new Audio(L[0]);a.loop=true;
  a.onerror=()=>{if(++i<L.length){a.src=L[i];if(cur===k)a.play().catch(()=>{})}};return a} // 読み込めない/非対応なら次の候補へ
-/* ===== 弾幕パターン（添字0〜8 = eins〜neun）===== */
+/* ===== 弾幕パターン（ランダム要素排除・完全固定パターン化） ===== */
 const B=(px,py,vx,vy,r=6)=>{let b={x:px,y:py,vx,vy,r,a:0};bt.bl.push(b);return b};
 const ring=(px,py,n,v,o=0)=>{for(let i=0;i<n;i++){let a=o+i*6.283/n;B(px,py,Math.cos(a)*v,Math.sin(a)*v)}};
 const aim=(px,py,v,o=0)=>{let a=Math.atan2(bt.y-12-py,bt.x-px)+o;B(px,py,Math.cos(a)*v,Math.sin(a)*v)};
 const sweep=(T,n,v)=>{let l=T%(n*2)<n;B(l?-10:W+10,GY-8,l?v:-v,0,9)};
 const P=[
- e=>{if(e(7))B(rnd(0,W),-5,0,rnd(3,4.5))},                                   // eins:雨
- (e,T)=>{if(e(75))sweep(T,75,4.5);if(e(40))B(rnd(0,W),-5,0,3)},              // zwei:地面を走る弾(ジャンプ)
+ (e,T)=>{if(e(7))B((T*113)%(W-40)+20,-5,0,3.2+((T/7)%4)*0.3)},                                     // eins:規則的な雨
+ (e,T)=>{if(e(75))sweep(T,75,4.5);if(e(40))B((T*173)%(W-40)+20,-5,0,3)},                           // zwei:地面弾＋周期的な落下弾
  (e,T)=>{if(e(6))for(let i=0;i<3;i++){let a=T*.11+i*2.094;B(400,110,Math.cos(a)*2.6,Math.sin(a)*2.6)}}, // drei:渦
- e=>{if(e(36))for(let i=-1;i<=1;i++)aim(rnd(100,700),40,4,i*.22)},            // vier:自機狙い
- (e,T)=>{if(e(95))ring(rnd(150,650),rnd(60,160),14,2.2,T)},                   // fünf:全方位リング
- e=>{if(e(110)){let g=Math.random()*14|0;for(let i=0;i<17;i++)if(i<g||i>g+2)B(i*50,-5,0,2.4,8)}}, // sechs:隙間のある壁
- e=>{if(e(80)){let b=B(rnd(0,W),-5,0,1.6,8);b.u=b=>{if(b.a++<110){let d=Math.atan2(bt.y-12-b.y,bt.x-b.x);b.vx+=(Math.cos(d)*1.8-b.vx)*.04;b.vy+=(Math.sin(d)*1.8-b.vy)*.04}}}}, // sieben:ホーミング
- e=>{if(e(14)){let x0=rnd(60,740),b=B(x0,-5,0,2.6);b.u=b=>{b.x=x0+Math.sin(b.a++*.09)*70}}}, // acht:蛇行
- (e,T)=>{P[4](e,T);if(e(70))sweep(T,70,5)}                                    // neun:リング+地面弾(中ボス)
+ (e,T)=>{if(e(36)){let px=100+((T/36)%7)*100;for(let i=-1;i<=1;i++)aim(px,40,4,i*.22)}},           // vier:自機狙い（一定順序のX座標から発射）
+ (e,T)=>{if(e(95))ring(400+Math.sin(T*0.03)*200,110+Math.cos(T*0.03)*40,14,2.2,T)},                // fünf:円運動する全方位リング
+ (e,T)=>{if(e(110)){let g=((T/110|0)*5)%14;for(let i=0;i<17;i++)if(i<g||i>g+2)B(i*50,-5,0,2.4,8)}}, // sechs:隙間が一定規則で動く壁
+ (e,T)=>{if(e(80)){let px=(T*127)%(W-40)+20;let b=B(px,-5,0,1.6,8);b.u=b=>{if(b.a++<110){let d=Math.atan2(bt.y-12-b.y,bt.x-b.x);b.vx+=(Math.cos(d)*1.8-b.vx)*.04;b.vy+=(Math.sin(d)*1.8-b.vy)*.04}}}}, // sieben:周期配置のホーミング
+ (e,T)=>{if(e(14)){let x0=60+((T/14|0)*97)%680,b=B(x0,-5,0,2.6);b.u=b=>{b.x=x0+Math.sin(b.a++*.09)*70}}}, // acht:周期位置からの蛇行
+ (e,T)=>{P[4](e,T);if(e(70))sweep(T,70,5)}                                                          // neun:リング+地面弾(中ボス)
 ];
 const SEG=360; // 弾幕ルーチンを切り替える間隔(フレーム。360=6秒)
 const ROT=[[0,3,0,5],[1,6,1,2],[2,4,2,7],[3,0,3,6],[4,1,4,7],[5,2,5,3],[6,4,6,1],[7,0,7,5],[8,2,8,3]]; // 各敵の弾幕の順番(0=eins…8=neun)。先頭が得意技
@@ -120,15 +120,13 @@ function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  else scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ。','ミナ｜あなたを倒しに来たわ！','勇者｜ここまで来たんだ。行くぞ！'],'talk',
   ()=>battle({name:'魔王',hue:0,pat:MAOU,f:1.1,bgm:'maou',done:badEnd}),0)}
 function badEnd(){S.ng=1;run={cl:[]};save();seen=0;
- scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える、楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
+ scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える,楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
 function trueEnd(){run={cl:[]};save();seen=0;
  scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
-function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END'],'end',title,0)} // battle()にlose:[台詞…]を渡すと、その敵に負けた時だけ専用のセリフになる
+function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END'],'end',title,0)}
 /* ===== 入力 ===== */
-/* テスト用: Shift+1 で「eins→neun の順に9体撃破済み・二周目」の状態にして階層選択へ。第10階層に入ると真ボス前のストーリーが始まる */
-/* テスト用: Shift+2 で「9階層を階層順に撃破済み(=魔王ルート)・一周目」の状態にして、魔王戦前のストーリーへ */
 function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.innerHTML='';boss()}
-const DEBUG=true; // 公開ビルドではGitHub Actionsがfalseに書き換える(ローカルではtrueのまま)
+const DEBUG=true;
 function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
 addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
  if(['Space','Enter','KeyZ'].includes(e.code)){
