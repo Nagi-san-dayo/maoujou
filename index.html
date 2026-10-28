@@ -113,7 +113,7 @@ function badEnd(){S.ng=1;try{localStorage.setItem('ng','1')}catch(e){}seen=0;
  scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える、楔……。','勇者｜……え？','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
 function trueEnd(){seen=0;
  scene(['ミナ｜…あったかい。ありがとう、勇者。','魔王の力は消え、世界を支える楔は、ふたりの手で守られた。','朝日の中、ふたりは並んで魔王城をあとにした。','#TRUE END','— Thank you for playing —'],'story',title,45)}
-function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END','進行状況は失われた。最初からやり直しだ。'],'end',title,0)} // battle()にlose:[台詞…]を渡すと、その敵に負けた時だけ専用のセリフになる
+function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜っ…！！','#DEAD END','進行状況は失われた。最初からやり直しだ。'],'end',title,0)} // battle()にlose:[台詞…]を渡すと、その敵に負けた時だけ専用のセリフになる
 /* ===== 入力 ===== */
 /* テスト用: Shift+1 で「eins→neun の順に9体撃破済み・二周目」の状態にして階層選択へ。第10階層に入ると真ボス前のストーリーが始まる */
 function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
