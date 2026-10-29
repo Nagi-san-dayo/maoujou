@@ -19,9 +19,9 @@ button.wp{font-size:1.5cqw;opacity:.6;border-color:#555;margin-top:1.2cqw;paddin
 <script>
 /* ===== BGM（bgm/フォルダに置く。ogg→m4a→mp3の順に試し、再生できた方を使う。片方だけでもOK。拡張子や形式はここで変更可）===== */
 const bg=n=>[`bgm/${n}.ogg`,`bgm/${n}.m4a`,`bgm/${n}.mp3`];
-const BGM={talk:bg('talk'),battle:bg('battle'),maou:bg('maou'),true:bg('true'),story:bg('story'),end:bg('end')};
+const BGM={talk:bg('talk'),battle:bg('battle'),battle2:[...bg('battle2'),...bg('battle')],maou:bg('maou'),true:bg('true'),story:bg('story'),end:bg('end')}; // battle2=1〜4,6〜9階層用(ファイルが無ければbattleを代用)
 /* ===== 基本設定 ===== */
-const W=800,H=450,GY=400,TIME=180*60,CUT=60*60; // 戦闘3分 / 残り1分で激化
+const W=800,H=450,GY=400,CUT=60*60; // 戦闘時間は battle() の time(秒。省略時180=3分)。残り1分(CUT)で激化
 const DE=['eins','zwei','drei','vier','fünf','sechs','sieben','acht','neun'];
 const NM=[3,7,1,5,9,2,8,4,6]; // 階層(1〜9)→数字。階層と数字は一致しない
 const resume=()=>{let a=A[cur];if(a&&a.paused)a.play().catch(()=>{})};
@@ -54,15 +54,19 @@ const P=[
 const SEG=360; // 弾幕ルーチンを切り替える間隔(フレーム。360=6秒)
 const ROT=[[0,3,0,5],[1,6,1,2],[2,4,2,7],[3,0,3,6],[4,1,4,7],[5,2,5,3],[6,4,6,1],[7,0,7,5],[8,2,8,3]]; // 各敵の弾幕の順番(0=eins…8=neun)。先頭が得意技
 const rot=n=>(e,T)=>P[ROT[n-1][T/SEG%4|0]](e,T);
-const MAOU=(e,T)=>{let p=T/SEG%4|0;if(p==0){P[2](e,T);P[3](e,T);if(e(80))sweep(T,80,4.5)}else{P[[5,6,7][p-1]](e,T);P[[1,4,3][p-1]](e,T)}};
-const TRUE=(e,T)=>{let p=T/SEG|0;P[[2,4,5,6,7,1,8][p%7]](e,T);P[[3,1,0,3,4,2,5][p%7]](e,T)};
+/* 魔王・ミナ用:弾幕を「1種類=1つの部品」に分け、同時に出る種類数を固定する(魔王=2種類 / ミナ=3種類) */
+const AT={rain:P[0],swp:(e,T)=>{if(e(75))sweep(T,75,4.5)},spiral:P[2],aim:P[3],ring:P[4],wall:P[5],home:P[6],sine:P[7]};
+const MP=[['spiral','aim'],['wall','swp'],['home','ring'],['sine','aim']]; // 魔王:SEGごとに切り替え(各2種類)
+const TP=[['spiral','aim','swp'],['ring','wall','rain'],['home','sine','swp'],['spiral','ring','aim'],['wall','home','rain'],['sine','aim','swp'],['ring','swp','wall']]; // ミナ(各3種類)
+const MAOU=(e,T)=>MP[T/SEG%MP.length|0].forEach(k=>AT[k](e,T));
+const TRUE=(e,T)=>TP[(T/SEG|0)%TP.length].forEach(k=>AT[k](e,T));
 /* ===== 戦闘 ===== */
-function battle(o){play(o.bgm);mode='b';adv=null;U.innerHTML='';bt={...o,t:0,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
+function battle(o){play(o.bgm);mode='b';adv=null;U.innerHTML='';bt={...o,t:0,len:(o.time||180)*60,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
 function step(){let s=bt;
  if(s.dead){if(--s.dead==0){let L=s.lose;bt=null;die(L)}return}
  if(s.cut>0)s.cut--; // カットイン表示中もゲームは止めない
  s.t++;
- if(s.t==CUT*2&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
+ if(s.t==s.len-CUT&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
  let L=K.ArrowLeft||K.KeyA,R=K.ArrowRight||K.KeyD;
  s.x=Math.max(10,Math.min(W-10,s.x+(R?4.5:0)-(L?4.5:0)));
  let J=K.ArrowUp||K.KeyW;
@@ -73,7 +77,7 @@ function step(){let s=bt;
  for(const b of s.bl){b.x+=b.vx;b.y+=b.vy;b.u&&b.u(b)}
  s.bl=s.bl.filter(b=>b.x>-60&&b.x<W+60&&b.y>-60&&b.y<H+40);
  if(s.bl.some(b=>Math.hypot(b.x-s.x,b.y-s.y+12)<b.r+3))s.dead=45; // 1発で死亡
- else if(s.t>=TIME){let d=s.done;bt=null;d()}
+ else if(s.t>=s.len){let d=s.done;bt=null;d()}
 }
 function drawB(){let s=bt,h=s.hue;
  x.fillStyle='#ffffff18';x.fillRect(0,GY,W,H-GY);x.fillStyle=`hsl(${h},50%,40%)`;x.fillRect(0,GY,W,2);
@@ -83,7 +87,7 @@ function drawB(){let s=bt,h=s.hue;
  x.fillStyle='#d9b45a';x.fillRect(s.x-7,s.y-24,14,24); // 勇者
  x.fillStyle='#fff';x.beginPath();x.arc(s.x,s.y-12,3,0,7);x.fill(); // 当たり判定
  x.font='20px serif';x.textAlign='left';x.fillStyle='#ece6d8';
- let r=Math.ceil((TIME-s.t)/60);x.fillText(`${s.name}　残り ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}`,16,28);
+ let r=Math.ceil((s.len-s.t)/60);x.fillText(`${s.name}　残り ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}`,16,28);
  if(s.cut>0){let t=s.cut,k=Math.min(1,(100-t)/12,t/12);x.save();x.translate((1-k)*-W,0);
   x.globalAlpha=.85;x.fillStyle=`hsl(${h},70%,30%)`;x.fillRect(0,36,W,60);x.globalAlpha=1;x.fillStyle='#fff';x.textAlign='center';
   x.font='bold 32px serif';x.fillText('残り1分',W/2,70);x.font='16px serif';x.fillText(s.name+'　— 踊り狂え—',W/2,89);x.restore()}
@@ -112,7 +116,7 @@ function tower(){play('talk');mode='m';adv=null;BH=250;let n=run.cl.length,h='';
  U.innerHTML=`<div class="tw"><h2>魔王城</h2><div class="gr">${h}</div>${WP}</div>`}
 function fl(f){if(f==10)return boss();let n=NM[f-1];
  scene([`第${f}階層。`,`${DE[n-1]}が現れた！`+(f==5?'　——この階層の主、中ボスだ。':'')],'talk',()=>
-  battle({name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.25:1,bgm:'battle',done:()=>{run.cl.push(f);save();
+  battle({name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.25:1,bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{run.cl.push(f);save();
    scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...(f==5?['ミナ｜やったね、勇者！あと半分だよ。']:[])],'talk',nx)}}),(n*36))}
 function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  if(ok)scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ','勇者｜ここでお前を倒す！','ミナ｜はい、ストップ','勇者｜ミナ…？','ミナ｜ずっとこの時を待っていたのよ、私自身が魔王となって、勇者、貴方を倒す時をね…','魔王｜なんだ…何を言って…','魔王｜ぐっ…','魔王はミナに吸収された。','ミナ｜さぁ、一緒に踊りましょう？'],'story',
