@@ -8,6 +8,7 @@ canvas,#u{position:absolute;inset:0;width:100%;height:100%}
 .tb{background:#0b0918ee;border:1px solid #d9b45a88;padding:1.2cqw 2.4cqw;min-height:9cqw;cursor:pointer}
 .tb b{color:#d9b45a;font-size:2cqw}.tb p{margin:0}
 .bn{margin:auto;font-size:8cqw;letter-spacing:.3em;color:#e8553d;cursor:pointer;text-align:center}
+.bn small{font-size:2.6cqw;letter-spacing:.1em;color:#ece6d8;margin-top:2cqw;opacity:1}
 .tw{margin:auto;text-align:center}.tw h1{font-size:8cqw;margin:0 0 1cqw;letter-spacing:.4em;font-weight:600}.tw h2{font-size:3cqw;margin:0 0 1cqw}
 button{font:inherit;color:#ece6d8;background:#0b0918cc;border:1px solid #e8553d;padding:.5cqw 2cqw;cursor:pointer}
 button:disabled{opacity:.35;cursor:default;border-color:#555}button:not(:disabled):hover{background:#e8553d55}
@@ -63,7 +64,7 @@ const TRUE=(e,T)=>TP[(T/SEG|0)%TP.length].forEach(k=>AT[k](e,T));
 /* ===== 戦闘 ===== */
 function battle(o){play(o.bgm);mode='b';adv=null;U.innerHTML='';bt={...o,t:0,len:(o.time||180)*60,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
 function step(){let s=bt;
- if(s.dead){if(--s.dead==0){let L=s.lose;bt=null;die(L)}return}
+ if(s.dead){if(--s.dead==0){let L=s.lose,rem=s.len-s.t;bt=null;die(L,rem)}return} // 死亡時の残り時間(rem)をdieへ渡す
  if(s.cut>0)s.cut--; // カットイン表示中もゲームは止めない
  s.t++;
  if(s.t==s.len-CUT&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
@@ -127,7 +128,8 @@ function badEnd(){S.ng=1;run={cl:[]};save();seen=0;
  scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える,楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
 function trueEnd(){run={cl:[]};save();seen=0;
  scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
-function die(L){seen=1;scene(L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END'],'end',title,0)}
+function die(L,rem){seen=1;let r=Math.ceil(rem/60),tm=rem==null?'':`<small>クリアまで あと ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}</small>`; // DEAD ENDの下に残り時間を表示
+ scene((L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END']).map(l=>l=='#DEAD END'?l+tm:l),'end',title,0)}
 /* ===== 入力 ===== */
 function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.innerHTML='';boss()}
 const DEBUG=true;
