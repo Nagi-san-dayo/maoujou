@@ -123,10 +123,10 @@ const mina=f=>S.ng?[run.cl.every((q,i)=>NM[q-1]==i+1)?OKL[run.cl.length-1]:NGL]:
 let bt_temp=null;
 function askSkip(o){
  if(run.min[o.id]){
-  mode='s';adv=null;
+  mode='ask';adv=null;
   let st=(o.time||180)-60, min=Math.floor(st/60), sec=st%60;
   U.innerHTML=`<div class="tw"><h2>${o.name}</h2><p style="font-size:2cqw">前回の記録から、残り1分（BGM ${min}:${String(sec).padStart(2,'0')}～）から再開できます。</p>
-  <div class="gr"><button onclick="launchBattle(false)">最初から</button><button onclick="launchBattle(true)">残り1分から</button></div></div>`;
+  <div class="gr"><button onclick="launchBattle(false)">[X] 初めから</button><button onclick="launchBattle(true)">[Z] 残り1分から</button></div></div>`;
   bt_temp=o;
  }else{bt_temp=o;launchBattle(false)}
 }
@@ -159,6 +159,11 @@ function dbg4(){if(!bt)return;let d=bt.done;bt=null;d()}
 const DEBUG=true;
 function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1]),min:{}};adv=null;U.innerHTML='';tower()}
 addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(DEBUG&&e.shiftKey&&e.code=='Digit3'){dbg3();return}if(DEBUG&&e.shiftKey&&e.code=='Digit4'){dbg4();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
+ if(mode=='ask'){
+  if(e.code=='KeyX')launchBattle(false);
+  else if(e.code=='KeyZ')launchBattle(true);
+  return;
+ }
  if(['Space','Enter','KeyZ'].includes(e.code)){
   if(mode=='s'&&adv)adv();
   else if(mode=='title')start();
