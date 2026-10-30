@@ -33,7 +33,7 @@ function save(){try{localStorage.setItem('save',JSON.stringify({ng:S.ng,cl:run.c
 try{let d=JSON.parse(localStorage.getItem('save')||'null');if(d){S.ng=d.ng|0;run.cl=Array.isArray(d.cl)?d.cl.filter(f=>f>=1&&f<=9):[];run.min=d.min||{}}else S.ng=+localStorage.getItem('ng')||0}catch(e){}
 const ST=Array.from({length:50},(_,i)=>[((i*137)%W),((i*83)%H)]); // 背景星の固定配置
 function play(k,st){if(cur===k){if(st!==undefined)try{A[cur].currentTime=st}catch(e){}resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
- let a=A[k]||(A[k]=mk(k));if(st!==undefined)try{a.currentTime=st}catch(e){}a.play().catch(()=>{})}
+ let a=A[k]||(A[k]=mk(k));try{a.currentTime=st!==undefined?st:0}catch(e){}a.play().catch(()=>{})}
 function mk(k){let L=BGM[k],i=0,a=new Audio(L[0]);a.loop=true;
  a.onerror=()=>{if(++i<L.length){a.src=L[i];if(cur===k)a.play().catch(()=>{})}};return a} // 読み込めない/非対応なら次の候補へ
 /* ===== 弾幕パターン（ランダム要素排除・完全固定パターン化） ===== */
