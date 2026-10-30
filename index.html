@@ -28,12 +28,12 @@ const NM=[3,7,1,5,9,2,8,4,6]; // 階層(1〜9)→数字。階層と数字は一�
 const resume=()=>{let a=A[cur];if(a&&a.paused)a.play().catch(()=>{})};
 const c=document.getElementById('c'),x=c.getContext('2d'),U=document.getElementById('u');
 const A={},K={},rnd=(a,b)=>a+Math.random()*(b-a);
-let cur=null,mode='m',adv=null,bt=null,run={cl:[]},BH=250,seen=0,S={ng:0};
-function save(){try{localStorage.setItem('save',JSON.stringify({ng:S.ng,cl:run.cl}))}catch(e){}} // 保存内容: 二周目フラグ(ng)と撃破済み階層(cl)
-try{let d=JSON.parse(localStorage.getItem('save')||'null');if(d){S.ng=d.ng|0;run.cl=Array.isArray(d.cl)?d.cl.filter(f=>f>=1&&f<=9):[]}else S.ng=+localStorage.getItem('ng')||0}catch(e){}
+let cur=null,mode='m',adv=null,bt=null,run={cl:[],min:{}},BH=250,seen=0,S={ng:0};
+function save(){try{localStorage.setItem('save',JSON.stringify({ng:S.ng,cl:run.cl,min:run.min}))}catch(e){}} // 保存内容: 二周目フラグ, 撃破済み階層, 残り1分到達フラグ
+try{let d=JSON.parse(localStorage.getItem('save')||'null');if(d){S.ng=d.ng|0;run.cl=Array.isArray(d.cl)?d.cl.filter(f=>f>=1&&f<=9):[];run.min=d.min||{}}else S.ng=+localStorage.getItem('ng')||0}catch(e){}
 const ST=Array.from({length:50},(_,i)=>[((i*137)%W),((i*83)%H)]); // 背景星の固定配置
-function play(k){if(cur===k){resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
- let a=A[k]||(A[k]=mk(k));a.currentTime=0;a.play().catch(()=>{})}
+function play(k,st=0){if(cur===k){try{A[cur].currentTime=st}catch(e){}resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
+ let a=A[k]||(A[k]=mk(k));try{a.currentTime=st}catch(e){}a.play().catch(()=>{})}
 function mk(k){let L=BGM[k],i=0,a=new Audio(L[0]);a.loop=true;
  a.onerror=()=>{if(++i<L.length){a.src=L[i];if(cur===k)a.play().catch(()=>{})}};return a} // 読み込めない/非対応なら次の候補へ
 /* ===== 弾幕パターン（ランダム要素排除・完全固定パターン化） ===== */
@@ -46,7 +46,7 @@ const P=[
  (e,T)=>{if(e(75))sweep(T,75,4.5);if(e(40))B((T*173)%(W-40)+20,-5,0,3)},                           // zwei:地面弾＋周期的な落下弾
  (e,T)=>{if(e(6))for(let i=0;i<3;i++){let a=T*.11+i*2.094;B(400,110,Math.cos(a)*2.6,Math.sin(a)*2.6)}}, // drei:渦
  (e,T)=>{if(e(36)){let px=100+((T/36)%7)*100;for(let i=-1;i<=1;i++)aim(px,40,4,i*.22)}},           // vier:自機狙い（一定順序のX座標から発射）
- (e,T)=>{if(e(95))ring(400+Math.sin(T*0.03)*200,110+Math.cos(T*0.03)*40,14,2.2,T)},                // fünf:円運動する全方位リング
+ (e,T)=>{if(e(110))ring(400+Math.sin(T*0.03)*200,110+Math.cos(T*0.03)*40,12,2.2,T)},               // fünf:円運動する全方位リング(難易度緩和)
  (e,T)=>{if(e(110)){let g=((T/110|0)*5)%14;for(let i=0;i<17;i++)if(i<g||i>g+2)B(i*50,-5,0,2.4,8)}}, // sechs:隙間が一定規則で動く壁
  (e,T)=>{if(e(80)){let px=(T*127)%(W-40)+20;let b=B(px,-5,0,1.6,8);b.u=b=>{if(b.a++<110){let d=Math.atan2(bt.y-12-b.y,bt.x-b.x);b.vx+=(Math.cos(d)*1.8-b.vx)*.04;b.vy+=(Math.sin(d)*1.8-b.vy)*.04}}}}, // sieben:周期配置のホーミング
  (e,T)=>{if(e(45)){let px=100+((T/45|0)*130)%600;for(let i=-2;i<=2;i++){let a=1.5708+i*.3;B(px,40,Math.cos(a)*3,Math.sin(a)*3)}}}, // acht:扇状弾(周期位置から下向きに5発)
@@ -62,12 +62,12 @@ const TP=[['spiral','aim','swp'],['ring','wall','rain'],['home','fan','swp'],['s
 const MAOU=(e,T)=>MP[T/SEG%MP.length|0].forEach(k=>AT[k](e,T));
 const TRUE=(e,T)=>TP[(T/SEG|0)%TP.length].forEach(k=>AT[k](e,T));
 /* ===== 戦闘 ===== */
-function battle(o){play(o.bgm);mode='b';adv=null;U.innerHTML='';bt={...o,t:0,len:(o.time||180)*60,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
+function battle(o){play(o.bgm,o.startT?o.startT/60:0);mode='b';adv=null;U.innerHTML='';bt={...o,t:o.startT||0,len:(o.time||180)*60,f:o.f||1,x:400,y:GY,vy:0,bl:[],cut:0,hard:0,dead:0}}
 function step(){let s=bt;
- if(s.dead){if(--s.dead==0){let L=s.lose,rem=s.len-s.t;bt=null;die(L,rem)}return} // 死亡時の残り時間(rem)をdieへ渡す
+ if(s.dead){if(--s.dead==0){let L=s.lose,rem=s.len-s.t,id=s.id;bt=null;die(L,rem,id)}return} // 死亡時の残り時間とIDをdieへ渡す
  if(s.cut>0)s.cut--; // カットイン表示中もゲームは止めない
  s.t++;
- if(s.t==s.len-CUT&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
+ if(s.t>=s.len-CUT&&!s.hard){s.hard=1;s.f*=1.6;s.cut=100} // 残り1分:激化+上部にカットイン(ゲームは止めない)
  let L=K.ArrowLeft||K.KeyA,R=K.ArrowRight||K.KeyD;
  s.x=Math.max(10,Math.min(W-10,s.x+(R?4.5:0)-(L?4.5:0)));
  let J=K.ArrowUp||K.KeyW;
@@ -105,7 +105,7 @@ function scene(L,bgm,cb,hue=250){play(bgm);BH=hue;mode='s';let i=0;
  adv=()=>{if(++i>=L.length){adv=null;U.innerHTML='';cb()}else show()};show()}
 const WP='<div><button class="wp" onclick="wipe()">セーブデータを消去</button></div>';
 function wipe(){if(!confirm('セーブデータをすべて消去します。よろしいですか？'))return;
- try{localStorage.removeItem('save');localStorage.removeItem('ng')}catch(e){}S.ng=0;run={cl:[]};seen=0;title()}
+ try{localStorage.removeItem('save');localStorage.removeItem('ng')}catch(e){}S.ng=0;run={cl:[],min:{}};seen=0;title()}
 function title(){play('talk');mode='title';BH=250;U.innerHTML=`<div class="tw"><h1>魔王城</h1><p>十の階層、ふたりの旅路</p><button onclick="start()">${run.cl.length?'つづきから':S.ng?'二周目をはじめる':'はじめる'}</button>${WP}</div>`}
 function start(){if(seen||run.cl.length)return nx();seen=1;
  scene(S.ng?['世界は崩壊した。…はずだった。気づけば、ふたりは再び魔王城の門の前に立っていた。','ミナ｜奇妙ね…','ミナ｜皆、ばらばらだわ…','勇者｜今度は、どの階層から挑んでもいい。色々試してみよう。']
@@ -113,35 +113,51 @@ function start(){if(seen||run.cl.length)return nx();seen=1;
 const nx=()=>S.ng?tower():fl(run.cl.length+1);
 function tower(){play('talk');mode='m';adv=null;BH=250;let n=run.cl.length,h='';
  for(let f=10;f>=1;f--){let m=NM[f-1],cl=run.cl.includes(f);
-  h+=`<button ${cl||(f==10&&n<9)?'disabled':''} onclick="fl(${f})">${f==10?'第10階層　魔王':`第${f}階層　${DE[m-1]}${f==5?'　★中ボス':''}${cl?'　✓':''}`}</button>`}
+  let dis=(f==10&&n<9)?'disabled':(cl&&!S.ng)?'disabled':''; // 2周目はクリア済みでも押せる
+  h+=`<button ${dis} onclick="fl(${f})">${f==10?'第10階層　魔王':`第${f}階層　${DE[m-1]}${f==5?'　★中ボス':''}${cl?'　✓':''}`}</button>`}
  U.innerHTML=`<div class="tw"><h2>魔王城</h2><div class="gr">${h}</div>${WP}</div>`}
 /* 撃破後のミナのセリフ。二周目以降は撃破順で変わる: ここまで正しい順(eins→neun)ならOKL[撃破数-1]、崩れていたらNGL(固定) */
 const OKL=['ミナ｜eins…ひとつめ。胸の奥で、何かがかちりと鳴った気がする。','ミナ｜zwei。ふたつめ。数えるたびに、この城が静かになっていくわ。','ミナ｜drei。みっつ。…ねえ勇者、やっぱりこの順番には意味があるのよ。','ミナ｜vier。よっつ。魔王の気配が、少しずつ近づいてくる…。','ミナ｜fünf。いつつ。半分まで来たわね。…私の中の声も、はっきりしてきた。','ミナ｜sechs。むっつ。…ごめんなさい、ちょっとだけ手が震えてるの。','ミナ｜sieben。ななつ。あと少し。…ふふ、順調ね。','ミナ｜acht。やっつ。もうすぐ全部そろう。…ずっと、待っていたの。','ミナ｜neun。ここのつ。…これで、全部そろったわ。さあ、上へ行きましょう、勇者。'];
 const NGL='ミナ｜…何も、起きないわね。この順番じゃ、ないのかもしれない。';
 const mina=f=>S.ng?[run.cl.every((q,i)=>NM[q-1]==i+1)?OKL[run.cl.length-1]:NGL]:f==5?['ミナ｜やったね、勇者！あと半分だよ。']:[];
+let bt_temp=null;
+function askSkip(o){
+ if(run.min[o.id]){
+  mode='s';adv=null;
+  let st=(o.time||180)-60, min=Math.floor(st/60), sec=st%60;
+  U.innerHTML=`<div class="tw"><h2>${o.name}</h2><p style="font-size:2cqw">前回の記録から、残り1分（BGM ${min}:${String(sec).padStart(2,'0')}～）から再開できます。</p>
+  <div class="gr"><button onclick="launchBattle(false)">最初から</button><button onclick="launchBattle(true)">残り1分から</button></div></div>`;
+  bt_temp=o;
+ }else{bt_temp=o;launchBattle(false)}
+}
+function launchBattle(skip){
+ let o=bt_temp;bt_temp=null;if(skip)o.startT=(o.time||180)*60-3600;
+ battle(o);
+}
 function fl(f){if(f==10)return boss();let n=NM[f-1];
  scene([`第${f}階層。`,`${DE[n-1]}が現れた！`+(f==5?'　——この階層の主、中ボスだ。':'')],'talk',()=>
-  battle({name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.25:1,bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{run.cl.push(f);save();
+  askSkip({id:f,name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.0:1,bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{if(!run.cl.includes(f))run.cl.push(f);save();
    scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...mina(f)],'talk',nx)}}),(n*36))}
 function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  if(ok)scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ','勇者｜ここでお前を倒す！','ミナ｜はい、ストップ','勇者｜ミナ…？','ミナ｜ずっとこの時を待っていたのよ、私自身が魔王となって、勇者、貴方を倒す時をね…','魔王｜なんだ…何を言って…','魔王｜ぐっ…','魔王はミナに吸収された。','ミナ｜さぁ、一緒に踊りましょう？'],'story',
-  ()=>battle({name:'ミナ',hue:300,pat:TRUE,f:1,bgm:'true',done:trueEnd,lose:['勇者の体を、無数の光が貫いた。','ミナ｜期待外れね。','#DEAD END']}),300);
+  ()=>askSkip({id:11,name:'ミナ',hue:300,pat:TRUE,f:1,bgm:'true',time:180,done:trueEnd,lose:['勇者の体を、無数の光が貫いた。','ミナ｜期待外れね。','#DEAD END']}),300);
  else scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ。','ミナ｜あなたを倒しに来たわ！','勇者｜ここまで来たんだ。行くぞ！'],'talk',
-  ()=>battle({name:'魔王',hue:0,pat:MAOU,f:1.1,bgm:'maou',done:badEnd}),0)}
-function badEnd(){S.ng=1;run={cl:[]};save();seen=0;
+  ()=>askSkip({id:10,name:'魔王',hue:0,pat:MAOU,f:0.9,bgm:'maou',time:180,done:badEnd}),0)}
+function badEnd(){S.ng=1;run.cl=[];save();seen=0;
  scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える,楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
-function trueEnd(){run={cl:[]};save();seen=0;
+function trueEnd(){run.cl=[];save();seen=0;
  scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
-function die(L,rem){seen=1;let r=Math.ceil(rem/60),tm=rem==null?'':`<small>クリアまで あと ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}</small>`; // DEAD ENDの下に残り時間を表示
+function die(L,rem,id){seen=1;let r=Math.ceil(rem/60),tm=rem==null?'':`<small>クリアまで あと ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}</small>`;
+ if(rem!=null&&rem<3600&&id){run.min[id]=1;save()} // 残り1分未満到達を記録
  scene((L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END']).map(l=>l=='#DEAD END'?l+tm:l),'end',title,0)}
 /* ===== 入力 ===== */
-function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.innerHTML='';boss()}
+function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9],min:{}};adv=null;U.innerHTML='';boss()}
 /* テスト用: Shift+3 で二周目の開始(冒頭の会話→階層選択。撃破済みなし)から */
-function dbg3(){bt=null;S.ng=1;seen=0;run={cl:[]};adv=null;U.innerHTML='';start()}
+function dbg3(){bt=null;S.ng=1;seen=0;run={cl:[],min:{}};adv=null;U.innerHTML='';start()}
 /* テスト用: Shift+4 で、戦闘中の今の階層(魔王・ミナ含む)を強制クリア */
 function dbg4(){if(!bt)return;let d=bt.done;bt=null;d()}
 const DEBUG=true;
-function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
+function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1]),min:{}};adv=null;U.innerHTML='';tower()}
 addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(DEBUG&&e.shiftKey&&e.code=='Digit3'){dbg3();return}if(DEBUG&&e.shiftKey&&e.code=='Digit4'){dbg4();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
  if(['Space','Enter','KeyZ'].includes(e.code)){
   if(mode=='s'&&adv)adv();
