@@ -49,16 +49,16 @@ const P=[
  (e,T)=>{if(e(95))ring(400+Math.sin(T*0.03)*200,110+Math.cos(T*0.03)*40,14,2.2,T)},                // fünf:円運動する全方位リング
  (e,T)=>{if(e(110)){let g=((T/110|0)*5)%14;for(let i=0;i<17;i++)if(i<g||i>g+2)B(i*50,-5,0,2.4,8)}}, // sechs:隙間が一定規則で動く壁
  (e,T)=>{if(e(80)){let px=(T*127)%(W-40)+20;let b=B(px,-5,0,1.6,8);b.u=b=>{if(b.a++<110){let d=Math.atan2(bt.y-12-b.y,bt.x-b.x);b.vx+=(Math.cos(d)*1.8-b.vx)*.04;b.vy+=(Math.sin(d)*1.8-b.vy)*.04}}}}, // sieben:周期配置のホーミング
- (e,T)=>{if(e(14)){let x0=60+((T/14|0)*97)%680,b=B(x0,-5,0,2.6);b.u=b=>{b.x=x0+Math.sin(b.a++*.09)*70}}}, // acht:周期位置からの蛇行
+ (e,T)=>{if(e(45)){let px=100+((T/45|0)*130)%600;for(let i=-2;i<=2;i++){let a=1.5708+i*.3;B(px,40,Math.cos(a)*3,Math.sin(a)*3)}}}, // acht:扇状弾(周期位置から下向きに5発)
  (e,T)=>{P[4](e,T);if(e(70))sweep(T,70,5)}                                                          // neun:リング+地面弾(中ボス)
 ];
 const SEG=360; // 弾幕ルーチンを切り替える間隔(フレーム。360=6秒)
 const ROT=[[0,3,0,5],[1,6,1,2],[2,4,2,7],[3,0,3,6],[4,1,4,7],[5,2,5,3],[6,4,6,1],[7,0,7,5],[8,2,8,3]]; // 各敵の弾幕の順番(0=eins…8=neun)。先頭が得意技
 const rot=n=>(e,T)=>P[ROT[n-1][T/SEG%4|0]](e,T);
 /* 魔王・ミナ用:弾幕を「1種類=1つの部品」に分け、同時に出る種類数を固定する(魔王=2種類 / ミナ=3種類) */
-const AT={rain:P[0],swp:(e,T)=>{if(e(75))sweep(T,75,4.5)},spiral:P[2],aim:P[3],ring:P[4],wall:P[5],home:P[6],sine:P[7]};
-const MP=[['spiral','aim'],['wall','swp'],['home','ring'],['sine','aim']]; // 魔王:SEGごとに切り替え(各2種類)
-const TP=[['spiral','aim','swp'],['ring','wall','rain'],['home','sine','swp'],['spiral','ring','aim'],['wall','home','rain'],['sine','aim','swp'],['ring','swp','wall']]; // ミナ(各3種類)
+const AT={rain:P[0],swp:(e,T)=>{if(e(75))sweep(T,75,4.5)},spiral:P[2],aim:P[3],ring:P[4],wall:P[5],home:P[6],fan:P[7]};
+const MP=[['spiral','aim'],['wall','swp'],['home','ring'],['fan','aim']]; // 魔王:SEGごとに切り替え(各2種類)
+const TP=[['spiral','aim','swp'],['ring','wall','rain'],['home','fan','swp'],['spiral','ring','aim'],['wall','home','rain'],['fan','aim','swp'],['ring','swp','wall']]; // ミナ(各3種類)
 const MAOU=(e,T)=>MP[T/SEG%MP.length|0].forEach(k=>AT[k](e,T));
 const TRUE=(e,T)=>TP[(T/SEG|0)%TP.length].forEach(k=>AT[k](e,T));
 /* ===== 戦闘 ===== */
@@ -115,10 +115,14 @@ function tower(){play('talk');mode='m';adv=null;BH=250;let n=run.cl.length,h='';
  for(let f=10;f>=1;f--){let m=NM[f-1],cl=run.cl.includes(f);
   h+=`<button ${cl||(f==10&&n<9)?'disabled':''} onclick="fl(${f})">${f==10?'第10階層　魔王':`第${f}階層　${DE[m-1]}${f==5?'　★中ボス':''}${cl?'　✓':''}`}</button>`}
  U.innerHTML=`<div class="tw"><h2>魔王城</h2><div class="gr">${h}</div>${WP}</div>`}
+/* 撃破後のミナのセリフ。二周目以降は撃破順で変わる: ここまで正しい順(eins→neun)ならOKL[撃破数-1]、崩れていたらNGL(固定) */
+const OKL=['ミナ｜eins…ひとつめ。胸の奥で、何かがかちりと鳴った気がする。','ミナ｜zwei。ふたつめ。数えるたびに、この城が静かになっていくわ。','ミナ｜drei。みっつ。…ねえ勇者、やっぱりこの順番には意味があるのよ。','ミナ｜vier。よっつ。魔王の気配が、少しずつ近づいてくる…。','ミナ｜fünf。いつつ。半分まで来たわね。…私の中の声も、はっきりしてきた。','ミナ｜sechs。むっつ。…ごめんなさい、ちょっとだけ手が震えてるの。','ミナ｜sieben。ななつ。あと少し。…ふふ、順調ね。','ミナ｜acht。やっつ。もうすぐ全部そろう。…ずっと、待っていたの。','ミナ｜neun。ここのつ。…これで、全部そろったわ。さあ、上へ行きましょう、勇者。'];
+const NGL='ミナ｜…何も、起きないわね。この順番じゃ、ないのかもしれない。';
+const mina=f=>S.ng?[run.cl.every((q,i)=>NM[q-1]==i+1)?OKL[run.cl.length-1]:NGL]:f==5?['ミナ｜やったね、勇者！あと半分だよ。']:[];
 function fl(f){if(f==10)return boss();let n=NM[f-1];
  scene([`第${f}階層。`,`${DE[n-1]}が現れた！`+(f==5?'　——この階層の主、中ボスだ。':'')],'talk',()=>
   battle({name:DE[n-1],hue:n*36,pat:rot(n),f:f==5?1.25:1,bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{run.cl.push(f);save();
-   scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...(f==5?['ミナ｜やったね、勇者！あと半分だよ。']:[])],'talk',nx)}}),(n*36))}
+   scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...mina(f)],'talk',nx)}}),(n*36))}
 function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  if(ok)scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ','勇者｜ここでお前を倒す！','ミナ｜はい、ストップ','勇者｜ミナ…？','ミナ｜ずっとこの時を待っていたのよ、私自身が魔王となって、勇者、貴方を倒す時をね…','魔王｜なんだ…何を言って…','魔王｜ぐっ…','魔王はミナに吸収された。','ミナ｜さぁ、一緒に踊りましょう？'],'story',
   ()=>battle({name:'ミナ',hue:300,pat:TRUE,f:1,bgm:'true',done:trueEnd,lose:['勇者の体を、無数の光が貫いた。','ミナ｜期待外れね。','#DEAD END']}),300);
@@ -132,9 +136,13 @@ function die(L,rem){seen=1;let r=Math.ceil(rem/60),tm=rem==null?'':`<small>ク�
  scene((L||['勇者は弾幕に呑まれた。','ミナ｜勇者っ…！！','#DEAD END']).map(l=>l=='#DEAD END'?l+tm:l),'end',title,0)}
 /* ===== 入力 ===== */
 function dbg2(){bt=null;S.ng=0;seen=1;run={cl:[1,2,3,4,5,6,7,8,9]};adv=null;U.innerHTML='';boss()}
+/* テスト用: Shift+3 で二周目の開始(冒頭の会話→階層選択。撃破済みなし)から */
+function dbg3(){bt=null;S.ng=1;seen=0;run={cl:[]};adv=null;U.innerHTML='';start()}
+/* テスト用: Shift+4 で、戦闘中の今の階層(魔王・ミナ含む)を強制クリア */
+function dbg4(){if(!bt)return;let d=bt.done;bt=null;d()}
 const DEBUG=true;
 function dbg(){bt=null;S.ng=1;seen=1;run={cl:NM.map((n,i)=>[n,i+1]).sort((a,b)=>a[0]-b[0]).map(a=>a[1])};adv=null;U.innerHTML='';tower()}
-addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
+addEventListener('keydown',e=>{K[e.code]=1;if(DEBUG&&e.shiftKey&&e.code=='Digit1'){dbg();return}if(DEBUG&&e.shiftKey&&e.code=='Digit2'){dbg2();return}if(DEBUG&&e.shiftKey&&e.code=='Digit3'){dbg3();return}if(DEBUG&&e.shiftKey&&e.code=='Digit4'){dbg4();return}if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault();
  if(['Space','Enter','KeyZ'].includes(e.code)){
   if(mode=='s'&&adv)adv();
   else if(mode=='title')start();
