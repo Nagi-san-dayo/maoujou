@@ -32,8 +32,8 @@ let cur=null,mode='m',adv=null,bt=null,run={cl:[],min:{}},BH=250,seen=0,S={ng:0}
 function save(){try{localStorage.setItem('save',JSON.stringify({ng:S.ng,cl:run.cl,min:run.min}))}catch(e){}} // 保存内容: 二周目フラグ, 撃破済み階層, 残り1分到達フラグ
 try{let d=JSON.parse(localStorage.getItem('save')||'null');if(d){S.ng=d.ng|0;run.cl=Array.isArray(d.cl)?d.cl.filter(f=>f>=1&&f<=9):[];run.min=d.min||{}}else S.ng=+localStorage.getItem('ng')||0}catch(e){}
 const ST=Array.from({length:50},(_,i)=>[((i*137)%W),((i*83)%H)]); // 背景星の固定配置
-function play(k,st=0){if(cur===k){try{A[cur].currentTime=st}catch(e){}resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
- let a=A[k]||(A[k]=mk(k));try{a.currentTime=st}catch(e){}a.play().catch(()=>{})}
+function play(k,st){if(cur===k){if(st!==undefined)try{A[cur].currentTime=st}catch(e){}resume();return}if(cur&&A[cur])A[cur].pause();cur=k;if(!k)return;
+ let a=A[k]||(A[k]=mk(k));if(st!==undefined)try{a.currentTime=st}catch(e){}a.play().catch(()=>{})}
 function mk(k){let L=BGM[k],i=0,a=new Audio(L[0]);a.loop=true;
  a.onerror=()=>{if(++i<L.length){a.src=L[i];if(cur===k)a.play().catch(()=>{})}};return a} // 読み込めない/非対応なら次の候補へ
 /* ===== 弾幕パターン（ランダム要素排除・完全固定パターン化） ===== */
@@ -136,16 +136,16 @@ function launchBattle(skip){
 }
 function fl(f){if(f==10)return boss();let n=NM[f-1];
  scene([`第${f}階層。`,`${DE[n-1]}が現れた！`+(f==5?'　——この階層の主、中ボスだ。':'')],'talk',()=>
-  askSkip({id:f,name:DE[n-1],hue:n*36,pat:rot(n),f:(f==5?1.0:1)*(S.ng?1.3:1),bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{if(!run.cl.includes(f))run.cl.push(f);save();
+  askSkip({id:f,name:DE[n-1],hue:n*36,pat:rot(n),f:(f==5?1.0:1)*(S.ng?1.3:1),bgm:f==5?'battle':'battle2',time:f==5?180:120,done:()=>{if(S.ng&&n===1)run.cl=[f];else if(!run.cl.includes(f))run.cl.push(f);save();
    scene([`${DE[n-1]}を撃破！（${run.cl.length}/9）`,...mina(f)],'talk',nx)}}),(n*36))}
 function boss(){let ok=run.cl.length==9&&run.cl.every((f,i)=>NM[f-1]==i+1);
  if(ok)scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ','勇者｜ここでお前を倒す！','ミナ｜はい、ストップ','勇者｜ミナ…？','ミナ｜ずっとこの時を待っていたのよ、私自身が魔王となって、勇者、貴方を倒す時をね…','魔王｜なんだ…何を言って…','魔王｜ぐっ…','魔王はミナに吸収された。','ミナ｜さぁ、一緒に踊りましょう？'],'story',
   ()=>askSkip({id:11,name:'ミナ',hue:300,pat:TRUE,f:1,bgm:'true',time:180,done:trueEnd,lose:['勇者の体を、無数の光が貫いた。','ミナ｜期待外れね。','#DEAD END']}),300);
  else scene(['最上階。玉座の間。','魔王｜よくぞ来た、勇者よ。','ミナ｜あなたを倒しに来たわ！','勇者｜ここまで来たんだ。行くぞ！'],'talk',
   ()=>askSkip({id:10,name:'魔王',hue:0,pat:MAOU,f:0.9,bgm:'maou',time:180,done:badEnd}),0)}
-function badEnd(){S.ng=1;run.cl=[];save();seen=0;
+function badEnd(){S.ng=1;run.cl=[];run.min={};save();seen=0;
  scene(['魔王｜見事だ、勇者よ…。だが、知らなかったのだな。','魔王｜我は……この世界を支える,楔……。','地鳴りが響き、城が、空が、大地が砕け散っていく。','ミナ｜勇者…！ 手を、離さないで…っ！','#BAD END','魔王を倒すだけでは、世界は救えなかった。もう一度、城へ。二周目からは全階層を自由な順番で攻略できる。'],'end',title,0)}
-function trueEnd(){run.cl=[];save();seen=0;
+function trueEnd(){run.cl=[];run.min={};save();seen=0;
  scene(['ミナ｜……ありがとう。','ミナの体が塵となって消えた。','勇者は、1人寂しく魔王城を離れた…','#TRUE END','— Thank you for playing —'],'story',title,45)}
 function die(L,rem,id){seen=1;let r=Math.ceil(rem/60),tm=rem==null?'':`<small>クリアまで あと ${Math.floor(r/60)}:${String(r%60).padStart(2,'0')}</small>`;
  if(rem!=null&&rem<3600&&id){run.min[id]=1;save()} // 残り1分未満到達を記録
